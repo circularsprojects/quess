@@ -50,6 +50,8 @@ for i in range(5):
         # sprites.add(GameCell(i * 60 + 50, j * 60 + 50, 60, 60))
         grid[i].append(GameCell(i * 60 + 50, j * 60 + 50, 60, 60, CellType.Empty))
 
+entangledPairs = []
+
 WPawns = [grid[1][0], grid[2][0], grid[3][0], grid[0][1], grid[4][1]]
 WKnights = [grid[0][0], grid[4][0]]
 BPawns = [grid[1][4], grid[2][4], grid[3][4], grid[0][3], grid[4][3]]
@@ -234,6 +236,7 @@ def main():
     pygame.display.set_caption("Quantum Apocalypse")
     running = True
     waitingForClick = False
+    waitingForEntangle = False
     selectedCell = None
     possible_moves = []
 
@@ -245,12 +248,12 @@ def main():
 
     circuit.draw(output='mpl')
 
-    simulator = AerSimulator()
-    compiled_circuit = transpile(circuit, simulator)
-    job = simulator.run(compiled_circuit, shots=1001)
-    result = job.result()
-    counts = result.get_counts(circuit)
-    print("\nTotal count for 00 and 11 are:", counts)
+    # simulator = AerSimulator()
+    # compiled_circuit = transpile(circuit, simulator)
+    # job = simulator.run(compiled_circuit, shots=1001)
+    # result = job.result()
+    # counts = result.get_counts(circuit)
+    # print("\nTotal count for 00 and 11 are:", counts)
 
     screen.fill((255, 255, 255))
 
@@ -286,6 +289,23 @@ def main():
             selectedOverlay.surf.fill((0, 255, 0), (1, 1, 58, 58))
             screen.blit(selectedOverlay.surf, selectedOverlay.rect)
 
+        if waitingForEntangle:
+            for move in possible_moves:
+                overlay = OverlayCell(move.x, move.y, 60, 60)
+                screen.blit(overlay.surf, overlay.rect)
+            selectedOverlay = OverlayCell(selectedCell.x, selectedCell.y, 60, 60)
+            selectedOverlay.surf.fill((255, 255, 0), (1, 1, 58, 58))
+            screen.blit(selectedOverlay.surf, selectedOverlay.rect)
+
+        for pair in entangledPairs:
+            # paint overlay
+            overlay = OverlayCell(pair[0].x, pair[0].y, 60, 60)
+            overlay.surf.fill((255, 0, 0), (1, 1, 58, 58))
+            screen.blit(overlay.surf, overlay.rect)
+            overlay = OverlayCell(pair[1].x, pair[1].y, 60, 60)
+            overlay.surf.fill((255, 0, 0), (1, 1, 58, 58))
+            screen.blit(overlay.surf, overlay.rect)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -299,19 +319,56 @@ def main():
                                     pygame.display.update()
                                     break
                                 if cell in possible_moves:
+                                    print(entangledPairs)
+                                    if cell in entangledPairs:
+                                        print("YES!")
+                                        simulator = AerSimulator()
+                                        compiled_circuit = transpile(circuit, simulator)
+                                        job = simulator.run(compiled_circuit, shots=1001)
+                                        result = job.result()
+                                        counts = result.get_counts(circuit)
+                                        print("\nTotal count for 00 and 11 are:", counts)
+                                        if counts['00'] > 500:
+                                            # destroy both pairs
+                                            for pair in entangledPairs:
+                                                if pair[0] == cell or pair[1] == cell:
+                                                    pair[0].cell_type = CellType.Empty
+                                                    pair[1].cell_type = CellType.Empty
+                                                    entangledPairs.remove(pair)
+                                                    pair[0].surf.fill((118, 150, 86), (1, 1, 58, 58))
+                                                    pair[1].surf.fill((118, 150, 86), (1, 1, 58, 58))
+                                                    selectedCell.cell_type = CellType.Empty
+                                                    selectedCell.surf.fill((118, 150, 86), (1, 1, 58, 58))
+                                                    waitingForClick = False
+                                                    pygame.display.update()
+                                            break
+                                    else:
+                                        cell.surf.fill((118, 150, 86), (1, 1, 58, 58))
+                                        cell.cell_type = selectedCell.cell_type
+                                        selectedCell.cell_type = CellType.Empty
+                                        waitingForClick = False
+                                        pygame.display.update()
+                                    break
+
+                            elif waitingForEntangle:
+                                if cell == selectedCell:
+                                    waitingForEntangle = False
+                                    pygame.display.update()
+                                    break
+                                if cell in possible_moves:
                                     cell.surf.fill((118, 150, 86), (1, 1, 58, 58))
                                     cell.cell_type = selectedCell.cell_type
-                                    selectedCell.cell_type = CellType.Empty
-                                    waitingForClick = False
+                                    # selectedCell.cell_type = CellType.Empty
+                                    waitingForEntangle = False
+                                    entangledPairs.append((selectedCell, cell))
                                     pygame.display.update()
                                     break
                             if event.button == 3:  # right click; entanglement function
                                 if cell.cell_type != CellType.Empty:
-                                    cell.surf.fill((200, 200, 0), (1, 1, 58, 58))
                                     possible_moves = get_moves(cell)
                                     if possible_moves is not None:
                                         selectedCell = cell
-                                        waitingForClick = True
+                                        waitingForEntangle = True
                                         pygame.display.update()
                             else:
                                 if cell.cell_type != CellType.Empty:
