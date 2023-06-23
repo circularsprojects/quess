@@ -1,6 +1,8 @@
 import pygame
 from enum import Enum
 from qiskit import *
+from qiskit_aer import AerSimulator
+from qiskit.visualization import plot_histogram
 
 white_pawn = pygame.image.load("white-pawn.png")
 white_knight = pygame.image.load("white-knight.png")
@@ -235,6 +237,21 @@ def main():
     selectedCell = None
     possible_moves = []
 
+    circuit = QuantumCircuit(2, 2)
+
+    circuit.h(0)
+    circuit.cs(0, 1)
+    circuit.measure([0, 1], [0, 1])
+
+    circuit.draw(output='mpl')
+
+    simulator = AerSimulator()
+    compiled_circuit = transpile(circuit, simulator)
+    job = simulator.run(compiled_circuit, shots=1001)
+    result = job.result()
+    counts = result.get_counts(circuit)
+    print("\nTotal count for 00 and 11 are:", counts)
+
     screen.fill((255, 255, 255))
 
     for entity in grid:
@@ -288,6 +305,14 @@ def main():
                                     waitingForClick = False
                                     pygame.display.update()
                                     break
+                            if event.button == 3:  # right click; entanglement function
+                                if cell.cell_type != CellType.Empty:
+                                    cell.surf.fill((200, 200, 0), (1, 1, 58, 58))
+                                    possible_moves = get_moves(cell)
+                                    if possible_moves is not None:
+                                        selectedCell = cell
+                                        waitingForClick = True
+                                        pygame.display.update()
                             else:
                                 if cell.cell_type != CellType.Empty:
                                     possible_moves = get_moves(cell)
