@@ -1,5 +1,6 @@
 import pygame
 from enum import Enum
+from qiskit import *
 
 white_pawn = pygame.image.load("white-pawn.png")
 white_knight = pygame.image.load("white-knight.png")
@@ -35,13 +36,12 @@ class OverlayCell(pygame.sprite.Sprite):
         self.y = y
         self.width = width
         self.height = height
-        # display a half-transparent box
         self.surf = pygame.Surface((width, height))
-        self.surf.fill((0, 100, 220, 128), (1, 1, width - 2, height - 2))
+        self.surf.fill((0, 100, 220), (1, 1, width - 2, height - 2))
+        self.surf.set_alpha(128)
         self.rect = self.surf.get_rect(center=(x + width / 2, y + height / 2))
 
 
-# sprites = pygame.sprite.Group()
 grid = [[], [], [], [], []]
 for i in range(5):
     for j in range(5):
@@ -71,29 +71,159 @@ def get_moves(cell: GameCell):
     if cell.cell_type == CellType.WPawn:
         cellX = convert_to_grid(cell.x, cell.y)[0]
         cellY = convert_to_grid(cell.x, cell.y)[1]
+        startingPlace = False
         if cellY == 0:
-            # check if the two cells in front are occupied
-            if grid[cellX][cellY + 1].cell_type == CellType.Empty and grid[cellX][cellY + 2].cell_type == CellType.Empty:
-                return [grid[cellX][cellY + 1], grid[cellX][cellY + 2]]
-            elif grid[cellX][cellY + 1].cell_type == CellType.Empty:
-                return [grid[cellX][cellY + 1]]
+            startingPlace = True
         elif cellY == 1:
             if cellX == 0 or cellX == 4:
+                startingPlace = True
+
+        if cellY + 1 < 5:
+            if startingPlace:
                 if grid[cellX][cellY + 1].cell_type == CellType.Empty and grid[cellX][cellY + 2].cell_type == CellType.Empty:
-                    return [grid[cellX][cellY + 1], grid[cellX][cellY + 2]]
+                    Returns.append(grid[cellX][cellY + 1])
+                    Returns.append(grid[cellX][cellY + 2])
                 elif grid[cellX][cellY + 1].cell_type == CellType.Empty:
-                    return [grid[cellX][cellY + 1]]
+                    Returns.append(grid[cellX][cellY + 1])
             else:
                 if grid[cellX][cellY + 1].cell_type == CellType.Empty:
-                    return [grid[cellX][cellY + 1]]
-        else:
-            if grid[cellX][cellY + 1].cell_type == CellType.Empty:
-                return [grid[cellX][cellY + 1]]
-        # check if there is an enemy piece to the top left or top right
-        if grid[cellX - 1][cellY - 1].cell_type == CellType.BPawn or grid[cellX - 1][cellY - 1].cell_type == CellType.BKnight:
-            return [grid[cellX - 1][cellY - 1]]
-        elif grid[cellX + 1][cellY - 1].cell_type == CellType.BPawn or grid[cellX + 1][cellY - 1].cell_type == CellType.BKnight:
-            return [grid[cellX + 1][cellY - 1]]
+                    Returns.append(grid[cellX][cellY + 1])
+
+            # check if there is an enemy piece to the top left or top right
+            if cellX - 1 >= 0:
+                if grid[cellX - 1][cellY + 1].cell_type == CellType.BPawn or grid[cellX - 1][cellY + 1].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX - 1][cellY + 1])
+            if cellX + 1 < 5:
+                if grid[cellX + 1][cellY + 1].cell_type == CellType.BPawn or grid[cellX + 1][cellY + 1].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX + 1][cellY + 1])
+
+    elif cell.cell_type == CellType.WKnight:
+        cellX = convert_to_grid(cell.x, cell.y)[0]
+        cellY = convert_to_grid(cell.x, cell.y)[1]
+        if cellY + 2 < 5:
+            if cellX - 1 >= 0:
+                if grid[cellX - 1][cellY + 2].cell_type == CellType.Empty or \
+                        grid[cellX - 1][cellY + 2].cell_type == CellType.BPawn or \
+                        grid[cellX - 1][cellY + 2].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX - 1][cellY + 2])
+            if cellX + 1 < 5:
+                if grid[cellX + 1][cellY + 2].cell_type == CellType.Empty or \
+                        grid[cellX + 1][cellY + 2].cell_type == CellType.BPawn or \
+                        grid[cellX + 1][cellY + 2].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX + 1][cellY + 2])
+        if cellY - 2 >= 0:
+            if cellX - 1 >= 0:
+                if grid[cellX - 1][cellY - 2].cell_type == CellType.Empty or \
+                        grid[cellX - 1][cellY - 2].cell_type == CellType.BPawn or \
+                        grid[cellX - 1][cellY - 2].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX - 1][cellY - 2])
+            if cellX + 1 < 5:
+                if grid[cellX + 1][cellY - 2].cell_type == CellType.Empty or \
+                        grid[cellX + 1][cellY - 2].cell_type == CellType.BPawn or \
+                        grid[cellX + 1][cellY - 2].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX + 1][cellY - 2])
+        if cellX + 2 < 5:
+            if cellY - 1 >= 0:
+                if grid[cellX + 2][cellY - 1].cell_type == CellType.Empty or \
+                        grid[cellX + 2][cellY - 1].cell_type == CellType.BPawn or \
+                        grid[cellX + 2][cellY - 1].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX + 2][cellY - 1])
+            if cellY + 1 < 5:
+                if grid[cellX + 2][cellY + 1].cell_type == CellType.Empty or \
+                        grid[cellX + 2][cellY + 1].cell_type == CellType.BPawn or \
+                        grid[cellX + 2][cellY + 1].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX + 2][cellY + 1])
+        if cellX - 2 >= 0:
+            if cellY - 1 >= 0:
+                if grid[cellX - 2][cellY - 1].cell_type == CellType.Empty or \
+                        grid[cellX - 2][cellY - 1].cell_type == CellType.BPawn or \
+                        grid[cellX - 2][cellY - 1].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX - 2][cellY - 1])
+            if cellY + 1 < 5:
+                if grid[cellX - 2][cellY + 1].cell_type == CellType.Empty or \
+                        grid[cellX - 2][cellY + 1].cell_type == CellType.BPawn or \
+                        grid[cellX - 2][cellY + 1].cell_type == CellType.BKnight:
+                    Returns.append(grid[cellX - 2][cellY + 1])
+
+    elif cell.cell_type == CellType.BPawn:
+        cellX = convert_to_grid(cell.x, cell.y)[0]
+        cellY = convert_to_grid(cell.x, cell.y)[1]
+        startingPlace = False
+        if cellY == 4:
+            startingPlace = True
+        elif cellY == 3:
+            if cellX == 0 or cellX == 4:
+                startingPlace = True
+
+        if cellY - 1 >= 0:
+            if startingPlace:
+                if grid[cellX][cellY - 1].cell_type == CellType.Empty and grid[cellX][cellY - 2].cell_type == CellType.Empty:
+                    Returns.append(grid[cellX][cellY - 1])
+                    Returns.append(grid[cellX][cellY - 2])
+                elif grid[cellX][cellY - 1].cell_type == CellType.Empty:
+                    Returns.append(grid[cellX][cellY - 1])
+            else:
+                if grid[cellX][cellY - 1].cell_type == CellType.Empty:
+                    Returns.append(grid[cellX][cellY - 1])
+
+            # check if there is an enemy piece to the bottom left or bottom right
+            if cellX - 1 >= 0:
+                if grid[cellX - 1][cellY - 1].cell_type == CellType.WPawn or grid[cellX - 1][cellY - 1].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX - 1][cellY - 1])
+            if cellX + 1 < 5:
+                if grid[cellX + 1][cellY - 1].cell_type == CellType.WPawn or grid[cellX + 1][cellY - 1].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX + 1][cellY - 1])
+
+    elif cell.cell_type == CellType.BKnight:
+        cellX = convert_to_grid(cell.x, cell.y)[0]
+        cellY = convert_to_grid(cell.x, cell.y)[1]
+
+        if cellX - 1 >= 0:
+            if cellY + 2 < 5:
+                if grid[cellX - 1][cellY + 2].cell_type == CellType.Empty or \
+                        grid[cellX - 1][cellY + 2].cell_type == CellType.WPawn or \
+                        grid[cellX - 1][cellY + 2].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX - 1][cellY + 2])
+            if cellY - 2 >= 0:
+                if grid[cellX - 1][cellY - 2].cell_type == CellType.Empty or \
+                        grid[cellX - 1][cellY - 2].cell_type == CellType.WPawn or \
+                        grid[cellX - 1][cellY - 2].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX - 1][cellY - 2])
+        if cellX + 1 < 5:
+            if cellY - 2 >= 0:
+                if grid[cellX + 1][cellY - 2].cell_type == CellType.Empty or \
+                        grid[cellX + 1][cellY - 2].cell_type == CellType.WPawn or \
+                        grid[cellX + 1][cellY - 2].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX + 1][cellY - 2])
+            if cellY + 2 < 5:
+                if grid[cellX + 1][cellY + 2].cell_type == CellType.Empty or \
+                        grid[cellX + 1][cellY + 2].cell_type == CellType.WPawn or \
+                        grid[cellX + 1][cellY + 2].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX + 1][cellY + 2])
+        if cellX + 2 < 5:
+            if cellY - 1 >= 0:
+                if grid[cellX + 2][cellY - 1].cell_type == CellType.Empty or \
+                        grid[cellX + 2][cellY - 1].cell_type == CellType.WPawn or \
+                        grid[cellX + 2][cellY - 1].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX + 2][cellY - 1])
+            if cellY + 1 < 5:
+                if grid[cellX + 2][cellY + 1].cell_type == CellType.Empty or \
+                        grid[cellX + 2][cellY + 1].cell_type == CellType.WPawn or \
+                        grid[cellX + 2][cellY + 1].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX + 2][cellY + 1])
+        if cellX - 2 >= 0:
+            if cellY - 1 >= 0:
+                if grid[cellX - 2][cellY - 1].cell_type == CellType.Empty or \
+                        grid[cellX - 2][cellY - 1].cell_type == CellType.WPawn or \
+                        grid[cellX - 2][cellY - 1].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX - 2][cellY - 1])
+            if cellY + 1 < 5:
+                if grid[cellX - 2][cellY + 1].cell_type == CellType.Empty or \
+                        grid[cellX - 2][cellY + 1].cell_type == CellType.WPawn or \
+                        grid[cellX - 2][cellY + 1].cell_type == CellType.WKnight:
+                    Returns.append(grid[cellX - 2][cellY + 1])
+
+    return Returns
 
 
 def main():
@@ -117,7 +247,6 @@ def main():
         clock.tick(30)
         pygame.display.update()
 
-        #
         for entity in grid:
             for cell in entity:
                 if cell.cell_type == CellType.WPawn:
@@ -136,6 +265,9 @@ def main():
             for move in possible_moves:
                 overlay = OverlayCell(move.x, move.y, 60, 60)
                 screen.blit(overlay.surf, overlay.rect)
+            selectedOverlay = OverlayCell(selectedCell.x, selectedCell.y, 60, 60)
+            selectedOverlay.surf.fill((0, 255, 0), (1, 1, 58, 58))
+            screen.blit(selectedOverlay.surf, selectedOverlay.rect)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -150,6 +282,7 @@ def main():
                                     pygame.display.update()
                                     break
                                 if cell in possible_moves:
+                                    cell.surf.fill((118, 150, 86), (1, 1, 58, 58))
                                     cell.cell_type = selectedCell.cell_type
                                     selectedCell.cell_type = CellType.Empty
                                     waitingForClick = False
@@ -163,6 +296,7 @@ def main():
                                         waitingForClick = True
                                         pygame.display.update()
                                     break
+
 
 if __name__ == "__main__":
     # call the main function
